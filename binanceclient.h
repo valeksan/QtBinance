@@ -10,8 +10,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QThread>
-
-
+#include <QHash>
 
 #define    API_URL "https://api.binance.com/api"
 #define    WITHDRAW_API_URL "https://api.binance.com/wapi"
@@ -73,14 +72,11 @@
 #define    ORDER_RESP_TYPE_RESULT "RESULT"
 #define    ORDER_RESP_TYPE_FULL "FULL"
 
-
-
-
 class binanceClient : public QObject
 {
     Q_OBJECT
 public:
-    binanceClient(QByteArray apiKey, QByteArray secretKey, QObject* parent = NULL);
+    binanceClient(QByteArray apiKey, QByteArray secretKey, QObject* parent = nullptr);
 
     QByteArray getHMAC(const QString&);
 
@@ -90,7 +86,6 @@ public:
     void getAccount();
     void getAllOrders();
     void candleSticks(const QString& name, qulonglong startTime);
-
     void openOrder(const QString& symbol, const QString& order, const QString& type, double quantity, double price);
 
 private:
@@ -108,12 +103,11 @@ public slots:
     void replyFinishedPrice(QNetworkReply* reply);
     void replyFinishedOrder(QNetworkReply* reply);
     void replyFinishedCandle(QNetworkReply* reply);
-    void replyFinishedSTime(QNetworkReply *reply);
+    void replyFinishedSTime(QNetworkReply* reply);
 
 signals:
-
     void priceSignal(double price);
-    void balanceSignal(double, double);
+    void balancesSignal(QHash<QString,double> balances);
     void refreshAccount();
     void serverTimeSignal(qulonglong stime);
     void candleSticksSignal(QJsonArray);

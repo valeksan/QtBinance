@@ -10,9 +10,8 @@
 
 #include "binanceclient.h"
 
-binanceClient::binanceClient(QByteArray apiKey, QByteArray secretKey, QObject* parent):
-    _apiKey(apiKey)
-  , _secretKey(secretKey)
+binanceClient::binanceClient(QByteArray apiKey, QByteArray secretKey, QObject* parent): QObject(parent),
+    _secretKey(secretKey), _apiKey(apiKey)
 {
     _networkManagerAccount = new QNetworkAccessManager(this);
     _networkManagerPrice = new QNetworkAccessManager(this);
@@ -32,10 +31,6 @@ binanceClient::binanceClient(QByteArray apiKey, QByteArray secretKey, QObject* p
 
     connect(_networkManagerSTime, &QNetworkAccessManager::finished,
             this, &binanceClient::replyFinishedSTime, Qt::DirectConnection);
-
-
-
-
 
 }
 
@@ -63,7 +58,7 @@ void binanceClient::getAllPrices()
     netReq.setSslConfiguration(QSslConfiguration::defaultConfiguration());
     netReq.setUrl(url);
     qDebug() << url;
-    //_networkManager->get(netReq);
+    _networkManagerPrice->get(netReq);
 }
 
 void binanceClient::getSymbolPrice(const QString &name)
@@ -175,38 +170,25 @@ void binanceClient::openOrder(const QString &symbol, const QString &order, const
 
 void binanceClient::replyFinishedAccount(QNetworkReply *reply)
 {
-
-    if (reply->error() != QNetworkReply::NoError)
-    {
+    if (reply->error() != QNetworkReply::NoError) {
         qDebug() << reply->errorString();
         reply->deleteLater();
         return;
     }
 
-
     QByteArray data = reply->readAll();
-    if(!data.isEmpty())
-    {
-        // qDebug() << data;
+    if (!data.isEmpty()) {
         QJsonDocument jsondoc = QJsonDocument::fromJson(data);
-        if(!jsondoc.isNull())
-        {
-            if(jsondoc.isObject())
-            {
-                double wtc = 0.0;
-                double eth = 0.0;
+        //qDebug() << "replyFinishedAccount:" << jsondoc;
+        if (!jsondoc.isNull()) {
+            if (jsondoc.isObject()) {
                 QJsonObject obj = jsondoc.object();
-                foreach(QJsonValue element, obj["balances"].toArray())
-                {
+                QHash<QString,double> balances;
+                foreach (QJsonValue element, obj["balances"].toArray()) {
                     QJsonObject node = element.toObject();
-                    if(node["asset"] == "ETH")
-                        eth = node["free"].toString().toDouble();
-                    else if(node["asset"] == "ADA")
-                        wtc = node["free"].toString().toDouble();
-
+                    balances.insert(node["asset"].toString(), node["free"].toString().toDouble());
                 }
-
-                emit balanceSignal(eth, wtc);
+                emit balancesSignal(balances);
             }
         }
     }
@@ -216,34 +198,28 @@ void binanceClient::replyFinishedAccount(QNetworkReply *reply)
 
 void binanceClient::replyFinishedPrice(QNetworkReply *reply)
 {
-    if (reply->error() != QNetworkReply::NoError)
-    {
+    if (reply->error() != QNetworkReply::NoError) {
         qDebug() << reply->errorString();
         reply->deleteLater();
         return;
     }
 
     QByteArray data = reply->readAll();
-    if(!data.isEmpty())
-    {
+    if (!data.isEmpty()) {
         // qDebug() << data;
         QJsonDocument jsondoc = QJsonDocument::fromJson(data);
 
-        if(!jsondoc.isNull())
-        {
-            if(jsondoc.isObject())
-            {
+        qDebug() << jsondoc;
+
+        if (!jsondoc.isNull()) {
+            if (jsondoc.isObject()) {
                 QJsonObject obj = jsondoc.object();
                 // qDebug() << obj["price"].toString();
                 emit priceSignal(obj["price"].toString().toDouble());
-            }
-
-            else if(jsondoc.isArray())
-            {
-                foreach(QJsonValue element, jsondoc.array())
-                {
+            } else if(jsondoc.isArray()) {
+                foreach (QJsonValue element, jsondoc.array()) {
                     QJsonObject node = element.toObject();
-                    if(node["symbol"].toString() == "ADAETH")
+                    if (node["symbol"].toString() == "ADAETH")
                         qDebug() << node["symbol"].toString() << node["price"].toString().toDouble();
                 }
             }
@@ -252,7 +228,6 @@ void binanceClient::replyFinishedPrice(QNetworkReply *reply)
 
     reply->deleteLater();
 }
-
 
 void binanceClient::replyFinishedOrder(QNetworkReply *reply)
 {
